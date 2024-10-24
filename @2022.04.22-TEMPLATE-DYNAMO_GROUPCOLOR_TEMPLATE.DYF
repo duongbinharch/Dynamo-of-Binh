@@ -1,0 +1,412 @@
+{
+  "Uuid": "3c9d0464-8643-5ffe-96e5-ab1769818209",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "SJ_Template",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CodeBlockNodeModel, DynamoCore",
+      "NodeType": "CodeBlockNode",
+      "Code": "\"http://primer.dynamobim.org/Appendix/A-3_packages.html\";\n\"http://primer.dynamobim.org/13_Best-Practice/13-1_Introduction.html\";",
+      "Id": "bf1f12231cd5458cbf567494b45d8798",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "c3aea4fb3ef84a6ab9a24274c35ae1c5",
+          "Name": "",
+          "Description": "Value of expression at line 1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "75a0e48bd5cc4f39a27f449dd92e3375",
+          "Name": "",
+          "Description": "Value of expression at line 2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows for DesignScript code to be authored directly"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "import clr\r\n\r\nclr.AddReference('ProtoGeometry')\r\nfrom Autodesk.DesignScript.Geometry import *\r\n\r\nclr.AddReference('RevitAPI')\r\nfrom Autodesk.Revit.DB import *\r\nfrom Autodesk.Revit.DB.Structure import *\r\n\r\nclr.AddReference('RevitAPIUI')\r\nfrom Autodesk.Revit.UI import *\r\n\r\nclr.AddReference('System')\r\nfrom System.Collections.Generic import List\r\n\r\nclr.AddReference('RevitNodes')\r\nimport Revit\r\nclr.ImportExtensions(Revit.GeometryConversion)\r\nclr.ImportExtensions(Revit.Elements)\r\n\r\nclr.AddReference('RevitServices')\r\nimport RevitServices\r\nfrom RevitServices.Persistence import DocumentManager\r\nfrom RevitServices.Transactions import TransactionManager\r\n\r\ndoc = DocumentManager.Instance.CurrentDBDocument\r\nuidoc=DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument\r\n\r\n# Preparing input from Dynamo to Revit\r\nelement = UnwrapElement(IN[0])\r\n\r\n# Do some action in a Transaction\r\nTransactionManager.Instance.EnsureInTransaction(doc)\r\n\r\nTransactionManager.Instance.TransactionTaskDone()\r\n\r\nOUT = element",
+      "VariableInputPorts": true,
+      "Id": "97484dd5da97479bb65802c17d748841",
+      "Inputs": [
+        {
+          "Id": "ed0ada58df5d43abaa994febc3b17fe5",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "27acf4c99fa24dfead518dab48c8c3d9",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded IronPython script."
+    }
+  ],
+  "Connectors": [],
+  "Dependencies": [],
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.0.3.8810",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "NodeViews": [
+      {
+        "ShowGeometry": true,
+        "Name": "Useful Links | CTRL + Click the link below",
+        "Id": "bf1f12231cd5458cbf567494b45d8798",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -948.36841318667337,
+        "Y": -2779.5902161809404
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Python Script | Reference Lib",
+        "Id": "97484dd5da97479bb65802c17d748841",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -1255.7986186493824,
+        "Y": -2642.3415100088223
+      }
+    ],
+    "Annotations": [
+      {
+        "Id": "d1e04e29bb1342df9a685b16edfa3eb1",
+        "Title": "DEBUG",
+        "Nodes": [
+          "6981089644c942f9b248d5666e72fd5f"
+        ],
+        "Left": 34.931417815705231,
+        "Top": -2418.159567926738,
+        "Width": 314.0,
+        "Height": 97.0,
+        "FontSize": 36.0,
+        "InitialTop": -2365.159567926738,
+        "InitialHeight": 140.0,
+        "TextblockHeight": 43.0,
+        "Background": "#FF848484"
+      },
+      {
+        "Id": "7b2d009075a24faa94372da6e77df173",
+        "Title": "SET",
+        "Nodes": [
+          "39d56ed65ef04adab56efb9ce9569feb"
+        ],
+        "Left": 34.783146131366266,
+        "Top": -2524.3250660200279,
+        "Width": 235.0,
+        "Height": 97.0,
+        "FontSize": 36.0,
+        "InitialTop": -2471.3250660200279,
+        "InitialHeight": 140.0,
+        "TextblockHeight": 43.0,
+        "Background": "#FF71C6A8"
+      },
+      {
+        "Id": "aaaf618e0d944b2e8d8e1c61a835d209",
+        "Title": "GET",
+        "Nodes": [
+          "56e1e24461874ac7a0b1bfe3e5e42104"
+        ],
+        "Left": 32.679619188336233,
+        "Top": -2957.1010654067181,
+        "Width": 252.0,
+        "Height": 97.0,
+        "FontSize": 36.0,
+        "InitialTop": -2904.1010654067181,
+        "InitialHeight": 140.0,
+        "TextblockHeight": 43.0,
+        "Background": "#FFBB87C6"
+      },
+      {
+        "Id": "5581bcbea6ef4e059c922c93a452fc04",
+        "Title": "INPUT",
+        "Nodes": [
+          "ed26bf7c4dd1435eac9e9bf0e5188a0c"
+        ],
+        "Left": 32.616713467008253,
+        "Top": -2847.8081555636595,
+        "Width": 184.0,
+        "Height": 97.0,
+        "FontSize": 36.0,
+        "InitialTop": -2794.8081555636595,
+        "InitialHeight": 140.0,
+        "TextblockHeight": 43.0,
+        "Background": "#FFFF7BAC"
+      },
+      {
+        "Id": "6be0f1e2e9694ab88258d225a71e5831",
+        "Title": "FUNCTION",
+        "Nodes": [
+          "3650e444876b44149ce9414a3c8a07f3"
+        ],
+        "Left": 33.572214781189246,
+        "Top": -2736.8379346341781,
+        "Width": 244.0,
+        "Height": 97.0,
+        "FontSize": 36.0,
+        "InitialTop": -2683.8379346341781,
+        "InitialHeight": 140.0,
+        "TextblockHeight": 43.0,
+        "Background": "#FFFFAA45"
+      },
+      {
+        "Id": "d91fe9a9c80a4b92addbd8fcdb01b42f",
+        "Title": "WIP",
+        "Nodes": [
+          "65535bf9048245f8b6583af2ca11fa07"
+        ],
+        "Left": 34.289019590474254,
+        "Top": -2304.602669156408,
+        "Width": 286.0,
+        "Height": 97.0,
+        "FontSize": 36.0,
+        "InitialTop": -2251.602669156408,
+        "InitialHeight": 140.0,
+        "TextblockHeight": 43.0,
+        "Background": "#FFD8D8D8"
+      },
+      {
+        "Id": "4807ceabd09c4c2085bbbfcaf542402e",
+        "Title": "OUTPUT",
+        "Nodes": [
+          "99d1e1e2c92d4519ac7963b0b8fbf17d"
+        ],
+        "Left": 32.699456408399328,
+        "Top": -2630.315767682368,
+        "Width": 233.0,
+        "Height": 97.0,
+        "FontSize": 36.0,
+        "InitialTop": -2577.315767682368,
+        "InitialHeight": 140.0,
+        "TextblockHeight": 43.0,
+        "Background": "#FF48B9FF"
+      },
+      {
+        "Id": "41e06969caa749ca8657f4a752269c29",
+        "Title": "NOTES",
+        "Nodes": [
+          "bf1f12231cd5458cbf567494b45d8798",
+          "ad2ddb5f35b9485eb3907909dd3dfb67",
+          "0e48d597be6549f8a1ac93a0c8fe7771",
+          "b7f849e42c5543968caa85b751415486",
+          "5ed6e70cc2314fc8a2c08875d57583b0",
+          "97484dd5da97479bb65802c17d748841"
+        ],
+        "Left": -1266.8861865130639,
+        "Top": -2957.7354230937881,
+        "Width": 1244.4311769980914,
+        "Height": 408.39391308496579,
+        "FontSize": 48.0,
+        "InitialTop": -2889.7354230937881,
+        "InitialHeight": 601.8191153523901,
+        "TextblockHeight": 58.0,
+        "Background": "#FF848484"
+      },
+      {
+        "Id": "6981089644c942f9b248d5666e72fd5f",
+        "Title": "Nodes used to debug the graph logic                       ",
+        "Nodes": [],
+        "Left": 44.931417815705231,
+        "Top": -2365.159567926738,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "39d56ed65ef04adab56efb9ce9569feb",
+        "Title": "Set parameter values of Revit objects",
+        "Nodes": [],
+        "Left": 44.783146131366266,
+        "Top": -2471.3250660200279,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "56e1e24461874ac7a0b1bfe3e5e42104",
+        "Title": "Get parameter values from Revit objects",
+        "Nodes": [],
+        "Left": 42.679619188336233,
+        "Top": -2904.1010654067181,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "ed26bf7c4dd1435eac9e9bf0e5188a0c",
+        "Title": "Data input and preparation",
+        "Nodes": [],
+        "Left": 42.616713467008253,
+        "Top": -2794.8081555636595,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "3650e444876b44149ce9414a3c8a07f3",
+        "Title": "Data manipulation on Dynamo objects",
+        "Nodes": [],
+        "Left": 43.572214781189246,
+        "Top": -2683.8379346341781,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "65535bf9048245f8b6583af2ca11fa07",
+        "Title": "Notes not considered part of the final package",
+        "Nodes": [],
+        "Left": 44.289019590474254,
+        "Top": -2251.602669156408,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "99d1e1e2c92d4519ac7963b0b8fbf17d",
+        "Title": "Object creation in Revit, Final output",
+        "Nodes": [],
+        "Left": 42.699456408399328,
+        "Top": -2577.315767682368,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "5ed6e70cc2314fc8a2c08875d57583b0",
+        "Title": "GUIDELINES\r\n________________________________________________________\r\n\r\nRead the instructions.\r\n\r\nAdd Notes and Comments to the graph.\r\n\r\nUse Node Groups and the Standard Color Coding.\r\n\r\nRename Nodes: <OriginalName> | <Description>.\r\n\r\nWrite Input and Output Notes for Python Scripts.\r\n\r\nPrefer repeatable simple node structures.\r\n",
+        "Nodes": [],
+        "Left": -331.4550095149724,
+        "Top": -2889.7354230937881,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "0e48d597be6549f8a1ac93a0c8fe7771",
+        "Title": "GRAPH INFO\r\n________________________________________________________\r\n\r\nCopyright 2019 Autodesk, Inc. All rights reserved.\r\nCompany: Surbana Jurong\r\nOffice: <office>\r\n\r\nVersion: 1.0.0\r\nAuthor: <author>\r\nKeywords: [KEYWORDS]\r\n\r\nTested on:\r\nDynamo : 2.0.3\r\nRevit : 2019\r\n",
+        "Nodes": [],
+        "Left": -1256.8861865130639,
+        "Top": -2888.2050388230477,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "b7f849e42c5543968caa85b751415486",
+        "Title": "INSTRUCTIONS\r\n________________________________________________________\r\n\r\n<DESCRIPTIONS>\r\n\r\n<INSTRUCTIONS>",
+        "Nodes": [],
+        "Left": -948.40912751369979,
+        "Top": -2888.6746548581382,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "ad2ddb5f35b9485eb3907909dd3dfb67",
+        "Title": "KNOWN ISSUES AND LIMITATIONS\r\n________________________________________________________\r\n\r\n<ISSUES>\r\n\r\n<LIMITATIONS>",
+        "Nodes": [],
+        "Left": -639.9320685143357,
+        "Top": -2889.5770091327281,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 36.0,
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFC1D676"
+      }
+    ],
+    "X": 1184.0515419396588,
+    "Y": 2317.9087541077006,
+    "Zoom": 0.74186276293659215
+  }
+}

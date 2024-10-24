@@ -1,0 +1,1721 @@
+{
+  "Uuid": "a01201e9-a1a0-4466-ab04-f9789e94ade1",
+  "IsCustomNode": false,
+  "Description": null,
+  "Name": "BinhDuong - Dimension -  Click Dimension Wall",
+  "ElementResolver": {
+    "ResolutionMap": {
+      "Autodesk.Vector": {
+        "Key": "Autodesk.DesignScript.Geometry.Vector",
+        "Value": "ProtoGeometry.dll"
+      },
+      "Autodesk.DesignScript.Geometry.Vector": {
+        "Key": "Autodesk.DesignScript.Geometry.Vector",
+        "Value": "ProtoGeometry.dll"
+      },
+      "Autodesk.Geometry": {
+        "Key": "Autodesk.DesignScript.Geometry.Geometry",
+        "Value": "ProtoGeometry.dll"
+      },
+      "Autodesk.DesignScript.Geometry.Geometry": {
+        "Key": "Autodesk.DesignScript.Geometry.Geometry",
+        "Value": "ProtoGeometry.dll"
+      },
+      "Surface": {
+        "Key": "Autodesk.DesignScript.Geometry.Surface",
+        "Value": "ProtoGeometry.dll"
+      },
+      "Line": {
+        "Key": "Autodesk.DesignScript.Geometry.Line",
+        "Value": "ProtoGeometry.dll"
+      },
+      "Autodesk.Face": {
+        "Key": "Autodesk.DesignScript.Geometry.Face",
+        "Value": "ProtoGeometry.dll"
+      },
+      "Autodesk.DesignScript.Geometry.Face": {
+        "Key": "Autodesk.DesignScript.Geometry.Face",
+        "Value": "ProtoGeometry.dll"
+      },
+      "DSCore.List": {
+        "Key": "DSCore.List",
+        "Value": "DSCoreNodes.dll"
+      }
+    }
+  },
+  "Inputs": [
+    {
+      "Id": "1abc28ecaf894b3a81419121975a6937",
+      "Name": "Exterior Side/Type for Dimensioning?",
+      "Type": "boolean",
+      "Value": "true",
+      "Description": "Selection between a true and false."
+    },
+    {
+      "Id": "4e716ac98061435f860040638b6e7806",
+      "Name": "Dimension Line Offset",
+      "Type": "number",
+      "Value": "300",
+      "NumberType": "Double",
+      "Description": "Creates a number."
+    }
+  ],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": true,
+      "Id": "1abc28ecaf894b3a81419121975a6937",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "38ae0a0809ec4fd4877d5f0c13e5b2c7",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Selection between a true and false."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "#thanks for all the help everyone\r\nimport clr\r\n\r\n# Import RevitAPI\r\nclr.AddReference(\"RevitAPI\")\r\nimport Autodesk\r\nfrom Autodesk.Revit.DB import *\r\nimport System\r\n\r\nclr.AddReference(\"ProtoGeometry\")\r\nfrom Autodesk.DesignScript import Geometry as geom\r\n\r\n# Import Element wrapper extension methods\r\nclr.AddReference(\"RevitNodes\")\r\nimport Revit\r\nfrom Autodesk.Revit.DB import *\r\n\r\n# Import ToProtoType, ToRevitType geometry conversion extension methods\r\nclr.ImportExtensions(Revit.GeometryConversion)\r\n\r\nclr.AddReference(\"RevitAPIUI\")\r\nfrom Autodesk.Revit.UI.Selection import ObjectType\r\n\r\nclr.AddReference(\"ProtoGeometry\")\r\nfrom Autodesk.DesignScript import Geometry as geom\r\n\r\n# Import DocumentManager and TransactionManager\r\nclr.AddReference(\"RevitServices\")\r\nimport RevitServices\r\nfrom RevitServices.Persistence import DocumentManager\r\nfrom RevitServices.Transactions import TransactionManager\r\n\r\ndoc = DocumentManager.Instance.CurrentDBDocument\r\nuidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument\r\n\r\n\r\ndef isParallel(v1, v2):\r\n    #it needs two vectors\r\n    return v1.CrossProduct(v2).IsAlmostEqualTo(XYZ(0, 0, 0))\r\n\r\ndef isAlmostEqualTo(v1, v2):\r\n    return v1.IsAlmostEqualTo(v2)\r\n\r\ndef isPerpendicular(v1, v2):\r\n    if v1.DotProduct(v2)== 0:\r\n        return True\r\n    else:\r\n        return False\r\n\r\n\r\ndef tolist(obj1):\r\n\tif hasattr(obj1,\"__iter__\"): return obj1\r\n\telse: return [obj1]\r\n\r\ndef CurveToVector(crv):\r\n\tvec = geom.Vector.ByTwoPoints(crv.StartPoint,crv.EndPoint)\r\n\treturn vec\r\n\r\n#set the wall orientation, depending on whether exterior or interior is selected\r\ndef wallNormal(wall, extOrint):\r\n    if extOrint:\r\n        wallNormal = wall.Orientation.ToVector()\r\n    else:\r\n        wallNormal = wall.Orientation.Negate().ToVector()\r\n    return wallNormal\r\n\r\n#this takes the wall location line, shifts it up the to the view cut plane\r\n#and moves it out to the external edge of the wall\r\ndef locToCutCrv(wall, wallNormal, lineEndExtend, viewx):\r\n\twallLn = wall.Location.Curve\r\n\twallCrv = wallLn.ToProtoType()\r\n\t#take the level height, subtract the height of the wall base\r\n\tzOf = viewx.GenLevel.Elevation-wallCrv.StartPoint.Z\r\n\t#get the cut plane offset of the view\r\n\tcPlaneH = viewx.GetViewRange().GetOffset(PlanViewPlane.CutPlane) #the CutPlane enumeration is like a property of PBP?\r\n\tcPlaneHiMM = UnitUtils.ConvertFromInternalUnits(cPlaneH, DisplayUnitType.DUT_MILLIMETERS)\t\r\n\twallCrv = geom.Geometry.Translate(wallCrv, geom.Vector.ByCoordinates(0,0, zOf+cPlaneHiMM))\r\n\twallwidthMM = UnitUtils.ConvertFromInternalUnits(wall.Width, DisplayUnitType.DUT_MILLIMETERS)\r\n\twallCrv = geom.Geometry.Translate(wallCrv, wallNormal, (wallwidthMM/2))\t\r\n\r\n\t#get wall curve info\r\n\twallvec = CurveToVector(wallCrv)\r\n\twallorig = geom.Curve.PointAtParameter(wallCrv,0.5)\r\n\twalldir1 = geom.Vector.ByTwoPoints(wallorig, wallCrv.StartPoint)\r\n\twalldir2 = geom.Vector.ByTwoPoints(wallorig, wallCrv.EndPoint)\r\n\r\n\t#move points\r\n\tptMvSt = geom.Geometry.Translate(wallCrv.StartPoint, walldir1, lineEndExtend)\r\n\tptMvEnd = geom.Geometry.Translate(wallCrv.EndPoint, walldir2, lineEndExtend)\r\n\r\n\t#create new line based on extended points\r\n\t#this is not a model line! that requires another method\r\n\tlineAtExternalEdgeAtCutPlaneHeight = geom.Line.ByStartPointEndPoint(ptMvSt, ptMvEnd).ToRevitType()\r\n\treturn lineAtExternalEdgeAtCutPlaneHeight\r\n\r\noffDist = IN[0]\r\nextOrInt = IN[1]\r\n\r\n#if the wall is exterior we need to extend the intersect line\r\n#beyond the exterior face to pick up the intersecting walls\r\n#if the wall is interior, we don't want to extend as far\r\nif extOrInt:\r\n    intersectLineEndExtend = 500\r\nelse:\r\n    intersectLineEndExtend = 0\r\n\r\n#THIS IS THE ORIGINAL OF WALL INPUT\r\n\r\n#User Input\r\n#ref = uidoc.Selection.PickObject(ObjectType.Element, 'Select A Wall')\r\n#define Targe Wall\r\n#targetWall = doc.GetElement(ref)\r\nwalllst = UnwrapElement(IN[2])\r\nviewlst = UnwrapElement(IN[3])\r\noutfi = []\r\nfor walli,viewi in zip(walllst,viewlst):\r\n\r\n\tfor targetWall in walli :\r\n\t\t#let's go get the walls for finding references\r\n\t\tintersectedWalls = []\r\n\t\t#start by adding our target wall\r\n\t\tintersectedWalls.append(targetWall)\r\n\t\t#then get all the other walls in the view and test if they intersect the Target Wall\r\n\t\tcollectedWalls = FilteredElementCollector(doc, viewi.Id).OfClass(Wall).ToElements()\r\n\t\tfor collectedWall in collectedWalls:\r\n\t\t    if targetWall.Location.Curve.Intersect(collectedWall.Location.Curve) == SetComparisonResult.Overlap:\r\n\t\t        intersectedWalls.append(collectedWall)\r\n\t\t\r\n\t\t#Target Wall external line for intersect check\r\n\t\texLi = locToCutCrv(targetWall, wallNormal(targetWall, extOrInt), intersectLineEndExtend, viewi)\r\n\t\t\r\n\t\t#Curve where the dimension will be located\r\n\t\toffCrv = geom.Geometry.Translate(exLi.ToProtoType(), wallNormal(targetWall, extOrInt), (offDist))\r\n\t\t\r\n\t\t#lets get the wall edges we want\r\n\t\t#only get edges intersecting target side? no this is misleading... we want any reference hitting our external wall\r\n\t\t#the problem is actually that the face itsetlf is registering the intersections we don't want e.g. the wrapping ends\r\n\t\tfrontFaceIW = []\r\n\t\tvertEdges = []\r\n\t\topts = Options()\r\n\t\t#without compute references, none of this works\r\n\t\topts.ComputeReferences = True\r\n\t\topts.IncludeNonVisibleObjects = True\r\n\t\topts.View = viewi\r\n\t\t    \r\n\t\tfor wallInt in intersectedWalls:\r\n\t\t    for obj in wallInt.get_Geometry(opts):\r\n\t\t        #walls also contain line geometry    \r\n\t\t        if isinstance(obj, Solid): \r\n\t\t            for face in obj.Faces:\r\n\t\t                #if face is normal is equal to wall normal it is the external face\r\n\t\t                if isAlmostEqualTo(wallInt.Orientation, face.ComputeNormal(UV(0.5,0.5))):\r\n\t\t                    frontFaceIW.append(face)\r\n\t\t                                   \r\n\t\t            for edge in obj.Edges:\r\n\t\t                #get edges which intersect\r\n\t\t                edgeC = edge.AsCurve()\r\n\t\t                edgeCNorm = edgeC.Direction.Normalize()\r\n\t\t                #if front face edge and edge intersects line and edge is vertical up or vertical down add to list\r\n\t\t                if edgeC.Intersect(exLi) != SetComparisonResult.Disjoint and (edgeCNorm.IsAlmostEqualTo(XYZ(0,0,1)) or edgeCNorm.IsAlmostEqualTo(XYZ(0,0,-1))):                    \r\n\t\t                    vertEdges.append(edge)\t\t\t\t\t\r\n\t\t\r\n\t\t#so we use the X+Y values as a unique identifier of location (we're less interested in\r\n\t\t#the actual unique reference, there may be 2 in the same place)\r\n\t\t#we will use these as filtering and sorting values\r\n\t\t#if we wanted to use this on sections we'd want to use z value?\r\n\t\tvertEdgesLoc = []\r\n\t\tfor v in vertEdges:\r\n\t\t    vLoc = v.AsCurve().GetEndPoint(0).X + v.AsCurve().GetEndPoint(0).Y\r\n\t\t    #getting some revit rounding errors, 7dp should be enough!\r\n\t\t    vertEdgesLoc.append(round(vLoc,7))\r\n\t\t\r\n\t\t\r\n\t\t#trying to remove stray intersect edges from adjoining walls\r\n\t\t#to identify them, they are not on an intersecting wall front face\r\n\t\t#their faces are not both on the target wall\r\n\t\t\r\n\t\t#so we need all the target wall faces\r\n\t\tfor obj in targetWall.get_Geometry(opts):\r\n\t\t    #walls also contain line geometry    \r\n\t\t    if isinstance(obj, Solid): \r\n\t\t        faceTW = obj.Faces\r\n\t\t\r\n\t\t#create a holding list containing everything in vertEdges\r\n\t\tstrayEdges = []        \r\n\t\tfor v in vertEdges:\r\n\t\t    strayEdges.append(v)\r\n\t\t\r\n\t\t#start removing things from holding list to leave only the stray ones\r\n\t\tfor faIW in frontFaceIW:\r\n\t\t    #if edge face 0&1 are both target wall faces we don't want to remove them\r\n\t\t    i = 0\r\n\t\t    length = len(strayEdges)\r\n\t\t    while (i < length):\r\n\t\t        if strayEdges[i].GetFace(0) in faceTW:\r\n\t\t            strayEdges.Remove(strayEdges[i])\r\n\t\t            length = length - 1\r\n\t\t        elif strayEdges[i].GetFace(1) in faceTW:\r\n\t\t            strayEdges.Remove(strayEdges[i])\r\n\t\t            length = length - 1            \r\n\t\t        #if our wall is external.... #if edge face is an intersecting wall's front face, we don't want it                \r\n\t\t        elif strayEdges[i].GetFace(0) == faIW and extOrInt == True:\r\n\t\t            strayEdges.Remove(strayEdges[i])            \r\n\t\t            length = length - 1 \r\n\t\t        elif strayEdges[i].GetFace(1) == faIW and extOrInt == True:\r\n\t\t            strayEdges.Remove(strayEdges[i])\r\n\t\t            length = length - 1 \r\n\t\t#            strayEdges.Remove(ed)\r\n\t\t        #or if the edge reference is to a non-wall\r\n\t\t            continue\r\n\t\t        i = i+1\r\n\t\t\r\n\t\t#if the wall is exterior, we want to remove references to internal wall edge\r\n\t\tif extOrInt == True:\r\n\t\t    i=0\r\n\t\t    length = len(vertEdgesLoc)\r\n\t\t    strayCLoc2 = []\r\n\t\t    while (i < length):\r\n\t\t        for stray in strayEdges:\r\n\t\t            stLoc = stray.AsCurve().GetEndPoint(0).X + stray.AsCurve().GetEndPoint(0).Y\r\n\t\t            #getting eroneous values, Revit accuracy not good enough? round is built in method\r\n\t\t            if round(vertEdgesLoc[i],7) == round(stLoc,7):\r\n\t\t                vertEdges.Remove(vertEdges[i])\r\n\t\t                vertEdgesLoc.Remove(vertEdgesLoc[i])\r\n\t\t                length = length - 1    \r\n\t\t                continue\r\n\t\t        i = i+1\r\n\t\t\r\n\t\t#sort the edges using the combined XY location value\r\n\t\tvertEdgesSorted = [x for _,x in sorted(zip(vertEdgesLoc,vertEdges))]\r\n\t\tvertEdgesLocSorted = sorted(vertEdgesLoc)\r\n\t\t\r\n\t\t#only add uniquely located references\r\n\t\t#this is awkward because we test 1 list, then add to the other list\r\n\t\t#we need the Temp list, so we know what should be added to the Sub list\r\n\t\tvertEdgeUniLocTemp = []\r\n\t\tvertEdgeSub = ReferenceArray()\r\n\t\tfor eL, e in zip(vertEdgesLocSorted, vertEdgesSorted):\r\n\t\t    if eL not in vertEdgeUniLocTemp:\r\n\t\t        vertEdgeUniLocTemp.append(eL)\r\n\t\t        vertEdgeSub.Append(e.Reference)\r\n\t\t\r\n\t\t\r\n\t\t#we want to pair up the references to create unique dims for the brick dim checker\r\n\t\t#convoluted code, ref arrays seem their own beast!\r\n\t\toutRefs = []\r\n\t\t#define the overall list length\r\n\t\tfor i in range(vertEdgeSub.Size-1):\r\n\t\t    #create the array here so the list nesting is correct\r\n\t\t    vertEdgeAr = ReferenceArray()\r\n\t\t    #define the sub list length\r\n\t\t    while vertEdgeAr.Size < 2:\r\n\t\t        #only get add 2 indices for each sub list\r\n\t\t        vertEdgeAr.Append(vertEdgeSub[i])\r\n\t\t        vertEdgeAr.Append(vertEdgeSub[i+1])\r\n\t\t    outRefs.append(vertEdgeAr)\r\n\t\t\r\n\t\t#OUT = len(strayEdges)\r\n\t\t#start transaction\r\n\t\tTransactionManager.Instance.EnsureInTransaction(doc)\r\n\t\t#create dimensions for each pair of referenes\r\n\t\tfor ref in outRefs:\r\n\t\t    dim = doc.Create.NewDimension(viewi, offCrv.ToRevitType(), ref), outRefs, \r\n\t\t    \r\n\t\t#finish transaction    \r\n\t\tTransactionManager.Instance.TransactionTaskDone()\r\n\t\t\r\n#output = outfi\r\n",
+      "VariableInputPorts": true,
+      "Id": "9493e96717c148cc88a037d73c077d22",
+      "Inputs": [
+        {
+          "Id": "e2fb53b6cf2044e9aebc45b8c88ddf77",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "c629cd732e6d4716b16cbc3299727d28",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "8034c0b7e5104fd395d2f48472b88882",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "b15ec022673647f79c1fb8237e61e5cb",
+          "Name": "IN[3]",
+          "Description": "Input #3",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "10552befa2884813ac9c7ef5c09a0896",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded IronPython script."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.DoubleInput, CoreNodeModels",
+      "NodeType": "NumberInputNode",
+      "NumberType": "Double",
+      "InputValue": 300.0,
+      "Id": "4e716ac98061435f860040638b6e7806",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "5fbc9486d25a4645b93aa8173a9722cb",
+          "Name": "",
+          "Description": "Double",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Creates a number."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsInView, DSRevitNodesUI",
+      "NodeType": "ExtensionNode",
+      "Id": "1a7c21db99d7491fb3f62cc0518ffebc",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "4b79567947524e6d9e0cac025e410a32",
+          "Name": "elements",
+          "Description": "All visible elements in the active view.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all the elements which are visible in the active view."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "ea974197c6f94270832aba302d232f62",
+      "Inputs": [
+        {
+          "Id": "7c839263b85d45c3b660af917897dd45",
+          "Name": "",
+          "Description": "Node to evaluate.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "a1b62264e8f847fd9a5b21bfadec4ecd",
+          "Name": "",
+          "Description": "Watch contents.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualize the output of node."
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Elements.Element.Geometry",
+      "Id": "249a8dcad8ba4b4484ae0d1c961bb75f",
+      "Inputs": [
+        {
+          "Id": "6a9dacfb926044ec8e78cdf19c2b24a6",
+          "Name": "element",
+          "Description": "Revit.Elements.Element",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "337b4f4a7de14ad1b9951ff3e24c55e2",
+          "Name": "var[]",
+          "Description": "var[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Get all of the Geometry associated with this object\n\nElement.Geometry ( ): var[]"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Application.Document.ActiveView",
+      "Id": "1945437373d14fe7a65b8e0cb551a3e8",
+      "Inputs": [
+        {
+          "Id": "a070a849b2e045168baf9cf9cd4adfff",
+          "Name": "document",
+          "Description": "Revit.Application.Document",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "c3e1cd3b971a4728b05c7dd15e6e4356",
+          "Name": "View",
+          "Description": "View",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Get the active view for the document\n\nDocument.ActiveView: View"
+    },
+    {
+      "ConcreteType": "Dynamo.Nodes.DSModelElementSelection, DSRevitNodesUI",
+      "NodeType": "ExtensionNode",
+      "InstanceId": [],
+      "Id": "03d0f208dbea4e4099daae9ecac7515e",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "5db5b2b25e514f82a5fa69937c011a7c",
+          "Name": "Element",
+          "Description": "The selected elements.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled"
+    },
+    {
+      "ConcreteType": "Dynamo.Nodes.DSModelElementSelection, DSRevitNodesUI",
+      "NodeType": "ExtensionNode",
+      "InstanceId": [],
+      "Id": "f63011e5b82e40338694db012a760875",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "c9f0283ad7924a8ea40c3195627c3654",
+          "Name": "Element",
+          "Description": "The selected elements.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "import clr\n\n#The inputs to this node will be stored as a list in the IN variables.\nwall = UnwrapElement(IN[0])\nlineElement = UnwrapElement(IN[1])\nview = UnwrapElement(IN[2])\n\nclr.AddReference(\"RevitAPI\")\nfrom Autodesk.Revit.DB import *\n\nclr.AddReference(\"RevitServices\")\nimport RevitServices\nfrom RevitServices.Transactions import TransactionManager\nfrom RevitServices.Persistence import DocumentManager\n\ndef isParallel(v1,v2):\n\treturn v1.CrossProduct(v2).IsAlmostEqualTo(XYZ(0,0,0))\n\nline = lineElement.GeometryCurve\nlineDir = line.GetEndPoint(1) - line.GetEndPoint(0)\n\nrefArray = ReferenceArray()\n\ndoc = DocumentManager.Instance.CurrentDBDocument\n\noptions = Options()\noptions.ComputeReferences = True\noptions.IncludeNonVisibleObjects = True\n\ngeoElement = wall.get_Geometry(options)\n\n#get side references\nfor obj in geoElement:\n\tif isinstance(obj,Solid):\n\t\tfor f in obj.Faces:\n\t\t\tfaceNormal = f.FaceNormal\n\t\t\tif isParallel(faceNormal,lineDir):\n\t\t\t\trefArray.Append(f.Reference)\n\t\t\t\t\n\t\t\t\t\n#get grid references\nfor id in wall.CurtainGrid.GetVGridLineIds():\n\tgridLine = doc.GetElement(id)\n\tgridGeo = gridLine.get_Geometry(options)\n\tfor obj in gridGeo:\n\t\tif isinstance(obj,Line):\n\t\t\trefArray.Append(obj.Reference)\n\n\nTransactionManager.Instance.EnsureInTransaction(doc)\n\ndoc.Create.NewDimension(view, line, refArray)\n\nTransactionManager.Instance.TransactionTaskDone()\n\n#Assign your output to the OUT variable.\nOUT = 0",
+      "VariableInputPorts": true,
+      "Id": "6f762225d6de42be8e8c0039f8536f9d",
+      "Inputs": [
+        {
+          "Id": "610a6b63bec342f2bce7e43fc7427837",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "d69ee12198ca45b184df266f15ed1ff2",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "01b9c67e7ac2457682a9fe0470a0f72f",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "2ebd164ba5bc43eab7c2a0f5b562facb",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded IronPython script."
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Application.Document.Current",
+      "Id": "47c480cc4ca94d7e8480358f9b6c59e7",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "3a63c852d97343bfa4a5f9d4ff085728",
+          "Name": "Document",
+          "Description": "Document",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Get the current document\n\nDocument.Current: Document"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "#thanks for all the help everyone\r\nimport clr\r\n\r\n# Import RevitAPI\r\nclr.AddReference(\"RevitAPI\")\r\nimport Autodesk\r\nfrom Autodesk.Revit.DB import *\r\nimport System\r\n\r\nclr.AddReference(\"ProtoGeometry\")\r\nfrom Autodesk.DesignScript import Geometry as geom\r\n\r\n# Import Element wrapper extension methods\r\nclr.AddReference(\"RevitNodes\")\r\nimport Revit\r\nfrom Autodesk.Revit.DB import *\r\n\r\n# Import ToProtoType, ToRevitType geometry conversion extension methods\r\nclr.ImportExtensions(Revit.GeometryConversion)\r\n\r\nclr.AddReference(\"RevitAPIUI\")\r\nfrom Autodesk.Revit.UI.Selection import ObjectType\r\n\r\nclr.AddReference(\"ProtoGeometry\")\r\nfrom Autodesk.DesignScript import Geometry as geom\r\n\r\n# Import DocumentManager and TransactionManager\r\nclr.AddReference(\"RevitServices\")\r\nimport RevitServices\r\nfrom RevitServices.Persistence import DocumentManager\r\nfrom RevitServices.Transactions import TransactionManager\r\n\r\ndoc = DocumentManager.Instance.CurrentDBDocument\r\nuidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument\r\n\r\n\r\ndef isParallel(v1, v2):\r\n    #it needs two vectors\r\n    return v1.CrossProduct(v2).IsAlmostEqualTo(XYZ(0, 0, 0))\r\n\r\ndef isAlmostEqualTo(v1, v2):\r\n    return v1.IsAlmostEqualTo(v2)\r\n\r\ndef isPerpendicular(v1, v2):\r\n    if v1.DotProduct(v2)== 0:\r\n        return True\r\n    else:\r\n        return False\r\n\r\n\r\ndef tolist(obj1):\r\n\tif hasattr(obj1,\"__iter__\"): return obj1\r\n\telse: return [obj1]\r\n\r\ndef CurveToVector(crv):\r\n\tvec = geom.Vector.ByTwoPoints(crv.StartPoint,crv.EndPoint)\r\n\treturn vec\r\n\r\n#set the wall orientation, depending on whether exterior or interior is selected\r\ndef wallNormal(wall, extOrint):\r\n    if extOrint:\r\n        wallNormal = wall.Orientation.ToVector()\r\n    else:\r\n        wallNormal = wall.Orientation.Negate().ToVector()\r\n    return wallNormal\r\n\r\n#this takes the wall location line, shifts it up the to the view cut plane\r\n#and moves it out to the external edge of the wall\r\ndef locToCutCrv(wall, wallNormal, lineEndExtend):\r\n\twallLn = wall.Location.Curve\r\n\twallCrv = wallLn.ToProtoType()\r\n\t#take the level height, subtract the height of the wall base\r\n\tzOf = doc.ActiveView.GenLevel.Elevation-wallCrv.StartPoint.Z\r\n\t#get the cut plane offset of the view\r\n\tcPlaneH = doc.ActiveView.GetViewRange().GetOffset(PlanViewPlane.CutPlane) #the CutPlane enumeration is like a property of PBP?\r\n\tcPlaneHiMM = UnitUtils.ConvertFromInternalUnits(cPlaneH, DisplayUnitType.DUT_MILLIMETERS)\t\r\n\twallCrv = geom.Geometry.Translate(wallCrv, geom.Vector.ByCoordinates(0,0, zOf+cPlaneHiMM))\r\n\twallwidthMM = UnitUtils.ConvertFromInternalUnits(wall.Width, DisplayUnitType.DUT_MILLIMETERS)\r\n\twallCrv = geom.Geometry.Translate(wallCrv, wallNormal, (wallwidthMM/2))\t\r\n\r\n\t#get wall curve info\r\n\twallvec = CurveToVector(wallCrv)\r\n\twallorig = geom.Curve.PointAtParameter(wallCrv,0.5)\r\n\twalldir1 = geom.Vector.ByTwoPoints(wallorig, wallCrv.StartPoint)\r\n\twalldir2 = geom.Vector.ByTwoPoints(wallorig, wallCrv.EndPoint)\r\n\r\n\t#move points\r\n\tptMvSt = geom.Geometry.Translate(wallCrv.StartPoint, walldir1, lineEndExtend)\r\n\tptMvEnd = geom.Geometry.Translate(wallCrv.EndPoint, walldir2, lineEndExtend)\r\n\r\n\t#create new line based on extended points\r\n\t#this is not a model line! that requires another method\r\n\tlineAtExternalEdgeAtCutPlaneHeight = geom.Line.ByStartPointEndPoint(ptMvSt, ptMvEnd).ToRevitType()\r\n\treturn lineAtExternalEdgeAtCutPlaneHeight\r\n\r\noffDist = IN[0]\r\nextOrInt = IN[1]\r\n\r\n#if the wall is exterior we need to extend the intersect line\r\n#beyond the exterior face to pick up the intersecting walls\r\n#if the wall is interior, we don't want to extend as far\r\nif extOrInt:\r\n    intersectLineEndExtend = 500\r\nelse:\r\n    intersectLineEndExtend = 0\r\n\r\n#User Input\r\nref = uidoc.Selection.PickObject(ObjectType.Element, 'Select A Wall')\r\n#define Targe Wall\r\ntargetWall = doc.GetElement(ref)\r\n\r\n\r\n#let's go get the walls for finding references\r\nintersectedWalls = []\r\n#start by adding our target wall\r\nintersectedWalls.append(targetWall)\r\n#then get all the other walls in the view and test if they intersect the Target Wall\r\ncollectedWalls = FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(Wall).ToElements()\r\nfor collectedWall in collectedWalls:\r\n    if targetWall.Location.Curve.Intersect(collectedWall.Location.Curve) == SetComparisonResult.Overlap:\r\n        intersectedWalls.append(collectedWall)\r\n\r\n#Target Wall external line for intersect check\r\nexLi = locToCutCrv(targetWall, wallNormal(targetWall, extOrInt), intersectLineEndExtend)\r\n\r\n#Curve where the dimension will be located\r\noffCrv = geom.Geometry.Translate(exLi.ToProtoType(), wallNormal(targetWall, extOrInt), (offDist))\r\n\r\n#lets get the wall edges we want\r\n#only get edges intersecting target side? no this is misleading... we want any reference hitting our external wall\r\n#the problem is actually that the face itsetlf is registering the intersections we don't want e.g. the wrapping ends\r\nfrontFaceIW = []\r\nvertEdges = []\r\n\r\nopts = Options()\r\n#without compute references, none of this works\r\nopts.ComputeReferences = True\r\nopts.IncludeNonVisibleObjects = True\r\nopts.View = doc.ActiveView\r\n    \r\nfor wallInt in intersectedWalls:\r\n    for obj in wallInt.get_Geometry(opts):\r\n        #walls also contain line geometry    \r\n        if isinstance(obj, Solid): \r\n            for face in obj.Faces:\r\n                #if face is normal is equal to wall normal it is the external face\r\n                if isAlmostEqualTo(wallInt.Orientation, face.ComputeNormal(UV(0.5,0.5))):\r\n                    frontFaceIW.append(face)\r\n                                   \r\n            for edge in obj.Edges:\r\n                #get edges which intersect\r\n                edgeC = edge.AsCurve()\r\n                edgeCNorm = edgeC.Direction.Normalize()\r\n                #if front face edge and edge intersects line and edge is vertical up or vertical down add to list\r\n                if edgeC.Intersect(exLi) != SetComparisonResult.Disjoint and (edgeCNorm.IsAlmostEqualTo(XYZ(0,0,1)) or edgeCNorm.IsAlmostEqualTo(XYZ(0,0,-1))):                    \r\n                    vertEdges.append(edge)\t\t\t\t\t\r\n\r\n#so we use the X+Y values as a unique identifier of location (we're less interested in\r\n#the actual unique reference, there may be 2 in the same place)\r\n#we will use these as filtering and sorting values\r\n#if we wanted to use this on sections we'd want to use z value?\r\nvertEdgesLoc = []\r\nfor v in vertEdges:\r\n    vLoc = v.AsCurve().GetEndPoint(0).X + v.AsCurve().GetEndPoint(0).Y\r\n    #getting some revit rounding errors, 7dp should be enough!\r\n    vertEdgesLoc.append(round(vLoc,7))\r\n\r\n\r\n#trying to remove stray intersect edges from adjoining walls\r\n#to identify them, they are not on an intersecting wall front face\r\n#their faces are not both on the target wall\r\n\r\n#so we need all the target wall faces\r\nfor obj in targetWall.get_Geometry(opts):\r\n    #walls also contain line geometry    \r\n    if isinstance(obj, Solid): \r\n        faceTW = obj.Faces\r\n\r\n#create a holding list containing everything in vertEdges\r\nstrayEdges = []        \r\nfor v in vertEdges:\r\n    strayEdges.append(v)\r\n\r\n#start removing things from holding list to leave only the stray ones\r\nfor faIW in frontFaceIW:\r\n    #if edge face 0&1 are both target wall faces we don't want to remove them\r\n    i = 0\r\n    length = len(strayEdges)\r\n    while (i < length):\r\n        if strayEdges[i].GetFace(0) in faceTW:\r\n            strayEdges.Remove(strayEdges[i])\r\n            length = length - 1\r\n        elif strayEdges[i].GetFace(1) in faceTW:\r\n            strayEdges.Remove(strayEdges[i])\r\n            length = length - 1            \r\n        #if our wall is external.... #if edge face is an intersecting wall's front face, we don't want it                \r\n        elif strayEdges[i].GetFace(0) == faIW and extOrInt == True:\r\n            strayEdges.Remove(strayEdges[i])            \r\n            length = length - 1 \r\n        elif strayEdges[i].GetFace(1) == faIW and extOrInt == True:\r\n            strayEdges.Remove(strayEdges[i])\r\n            length = length - 1 \r\n#            strayEdges.Remove(ed)\r\n        #or if the edge reference is to a non-wall\r\n            continue\r\n        i = i+1\r\n\r\n#if the wall is exterior, we want to remove references to internal wall edge\r\nif extOrInt == True:\r\n    i=0\r\n    length = len(vertEdgesLoc)\r\n    strayCLoc2 = []\r\n    while (i < length):\r\n        for stray in strayEdges:\r\n            stLoc = stray.AsCurve().GetEndPoint(0).X + stray.AsCurve().GetEndPoint(0).Y\r\n            #getting eroneous values, Revit accuracy not good enough? round is built in method\r\n            if round(vertEdgesLoc[i],7) == round(stLoc,7):\r\n                vertEdges.Remove(vertEdges[i])\r\n                vertEdgesLoc.Remove(vertEdgesLoc[i])\r\n                length = length - 1    \r\n                continue\r\n        i = i+1\r\n\r\n#sort the edges using the combined XY location value\r\nvertEdgesSorted = [x for _,x in sorted(zip(vertEdgesLoc,vertEdges))]\r\nvertEdgesLocSorted = sorted(vertEdgesLoc)\r\n\r\n#only add uniquely located references\r\n#this is awkward because we test 1 list, then add to the other list\r\n#we need the Temp list, so we know what should be added to the Sub list\r\nvertEdgeUniLocTemp = []\r\nvertEdgeSub = ReferenceArray()\r\nfor eL, e in zip(vertEdgesLocSorted, vertEdgesSorted):\r\n    if eL not in vertEdgeUniLocTemp:\r\n        vertEdgeUniLocTemp.append(eL)\r\n        vertEdgeSub.Append(e.Reference)\r\n\r\n\r\n#we want to pair up the references to create unique dims for the brick dim checker\r\n#convoluted code, ref arrays seem their own beast!\r\noutRefs = []\r\n#define the overall list length\r\nfor i in range(vertEdgeSub.Size-1):\r\n    #create the array here so the list nesting is correct\r\n    vertEdgeAr = ReferenceArray()\r\n    #define the sub list length\r\n    while vertEdgeAr.Size < 2:\r\n        #only get add 2 indices for each sub list\r\n        vertEdgeAr.Append(vertEdgeSub[i])\r\n        vertEdgeAr.Append(vertEdgeSub[i+1])\r\n    outRefs.append(vertEdgeAr)\r\n\r\n#OUT = len(strayEdges)\r\n#start transaction\r\nTransactionManager.Instance.EnsureInTransaction(doc)\r\n#create dimensions for each pair of referenes\r\nfor ref in outRefs:    \r\n    dim = doc.Create.NewDimension(doc.ActiveView, offCrv.ToRevitType(), ref), outRefs, \r\n#finish transaction    \r\nTransactionManager.Instance.TransactionTaskDone()",
+      "VariableInputPorts": true,
+      "Id": "cc0e751c351c4d09ad0a0c269e855bf0",
+      "Inputs": [
+        {
+          "Id": "2b1b1d75edcb4e4bb98e9ec6445c3275",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "744a7b664f2249f7924849f8ac42096e",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "615ba75a95ec4ad683acfa8563959e12",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded IronPython script."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "import clr\n\n#The inputs to this node will be stored as a list in the IN variables.\nwall = UnwrapElement(IN[0])\nlineElement = UnwrapElement(IN[1])\nview = UnwrapElement(IN[2])\n\nclr.AddReference(\"RevitAPI\")\nfrom Autodesk.Revit.DB import *\n\nclr.AddReference(\"RevitServices\")\nimport RevitServices\nfrom RevitServices.Transactions import TransactionManager\nfrom RevitServices.Persistence import DocumentManager\n\ndef isParallel(v1,v2):\n\treturn v1.CrossProduct(v2).IsAlmostEqualTo(XYZ(0,0,0))\n\nline = lineElement.GeometryCurve\nlineDir = line.GetEndPoint(1) - line.GetEndPoint(0)\n\nrefArray = ReferenceArray()\n\ndoc = DocumentManager.Instance.CurrentDBDocument\n\noptions = Options()\noptions.ComputeReferences = True\noptions.IncludeNonVisibleObjects = True\n\ngeoElement = wall.get_Geometry(options)\n\n#get side references\nfor obj in geoElement:\n\tif isinstance(obj,Solid):\n\t\tfor f in obj.Faces:\n\t\t\tfaceNormal = f.FaceNormal\n\t\t\tif isParallel(faceNormal,lineDir):\n\t\t\t\trefArray.Append(f.Reference)\n\t\t\t\t\n\t\t\t\t\n#get grid references\nfor id in wall.CurtainGrid.GetVGridLineIds():\n\tgridLine = doc.GetElement(id)\n\tgridGeo = gridLine.get_Geometry(options)\n\tfor obj in gridGeo:\n\t\tif isinstance(obj,Line):\n\t\t\trefArray.Append(obj.Reference)\n\n\nTransactionManager.Instance.EnsureInTransaction(doc)\n\ndoc.Create.NewDimension(view, line, refArray)\n\nTransactionManager.Instance.TransactionTaskDone()\n\n#Assign your output to the OUT variable.\nOUT = 0",
+      "VariableInputPorts": true,
+      "Id": "61db359f0f8f4dc48b439d25e52baf3d",
+      "Inputs": [
+        {
+          "Id": "e26f804e886341cda7b1d5f684ea021b",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "2792be7af534488c965a81e21d2abb7d",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "655b402cd7974045a92b9a52d3f74bd1",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "1446859e7f924be6af603d70204ac660",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded IronPython script."
+    },
+    {
+      "ConcreteType": "Dynamo.Nodes.DSModelElementsSelection, DSRevitNodesUI",
+      "NodeType": "ExtensionNode",
+      "InstanceId": [
+        "32bbefbb-1f43-42a5-9de5-843e74cacd47-0004809f",
+        "32bbefbb-1f43-42a5-9de5-843e74cacd47-000480a0",
+        "32bbefbb-1f43-42a5-9de5-843e74cacd47-000480a1",
+        "32bbefbb-1f43-42a5-9de5-843e74cacd47-000480a2"
+      ],
+      "Id": "28c4482ba3984d71bffd9a71e242ed39",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "a04d35c87fa34afbb0672d2c2c248b81",
+          "Name": "Elements",
+          "Description": "The selected elements.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Elements.Views.Sheet.Views",
+      "Id": "ff0af217ac3348269e8f7780a69fb183",
+      "Inputs": [
+        {
+          "Id": "e5c22c36700a4c12a97153bcd2dced37",
+          "Name": "sheet",
+          "Description": "Revit.Elements.Views.Sheet",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "e132e7d8c0ae420194843bad3b6f0b63",
+          "Name": "View[]",
+          "Description": "View[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Get the Views on a Sheet\n\nSheet.Views: View[]"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "#Copyright (c) mostafa el ayoubi ,  2017\n#Data-Shapes www.data-shapes.net , elayoubi.mostafa@gmail.com\n\nimport clr\nclr.AddReference('RevitAPI')\nfrom Autodesk.Revit.DB import*\nclr.AddReference('RevitServices')\nfrom RevitServices.Persistence import DocumentManager\n\ndoc = DocumentManager.Instance.CurrentDBDocument\n\nif isinstance(IN[0],list):\n\tviews = UnwrapElement(IN[0])\nelse:\n\tviews = [UnwrapElement(IN[0])]\n\nOUT = [FilteredElementCollector(doc,v.Id).ToElements() for v in views]",
+      "VariableInputPorts": true,
+      "Id": "4ccd467afe764b6e90fd5204c23275f6",
+      "Inputs": [
+        {
+          "Id": "d2937a62b5264d409b2f27483a5437f4",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "49b117fdbdf0420b96a3f21371e59bec",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded IronPython script."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 610,
+      "SelectedString": "OST_Walls",
+      "NodeType": "ExtensionNode",
+      "Id": "a7c2508ff5054eb3a629ff63c9a41763",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "26f1a18088a84498a923ce2edc8844f1",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Elements.Category.Name",
+      "Id": "ddf526f7476d47f2bac5a260dfb0b250",
+      "Inputs": [
+        {
+          "Id": "4244675c61ae4de3801fd0786b6c6de7",
+          "Name": "category",
+          "Description": "Revit.Elements.Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "4c4529e6b49147948a048cbcc51ebf78",
+          "Name": "string",
+          "Description": "string",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "The name of the Category.\n\nCategory.Name: string"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "DSCore.List.FilterByBoolMask@var[]..[],var[]..[]",
+      "Id": "ad838cb8a2b54fa4acde069f147d0b50",
+      "Inputs": [
+        {
+          "Id": "7b517397bc7049f98f2582e0e9da6e30",
+          "Name": "list",
+          "Description": "List to filter.\n\nvar[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "afbfdcace1db4f6db886b7244285e0ce",
+          "Name": "mask",
+          "Description": "List of booleans representing a mask.\n\nvar[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "729bc703cf6f487182e89b8132358a69",
+          "Name": "in",
+          "Description": "Items whose mask index is true.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "f489c74dca89418b9801a3e30b5487b6",
+          "Name": "out",
+          "Description": "Items whose mask index is false.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Filters a sequence by looking up corresponding indices in a separate list of booleans.\n\nList.FilterByBoolMask (list: var[]..[], mask: var[]..[]): var[]..[]"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Application.Document.ActiveView",
+      "Id": "e2746252ad1b40beb30872e20d7b77cc",
+      "Inputs": [
+        {
+          "Id": "79493b4668ea4da28e54f0aff3d8ca09",
+          "Name": "document",
+          "Description": "Revit.Application.Document",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "054f683beda24a34af53c34c53087ac5",
+          "Name": "View",
+          "Description": "View",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Get the active view for the document\n\nDocument.ActiveView: View"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Application.Document.Current",
+      "Id": "99741dcde65f4b1cb77402726b4a4e06",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "f2cb9337d87a4706bafbcc4c28efd0d2",
+          "Name": "Document",
+          "Description": "Document",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Get the current document\n\nDocument.Current: Document"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CustomNodes.Function, DynamoCore",
+      "FunctionSignature": "c8e81411-6f5c-461e-8b9e-4bccecc03328",
+      "FunctionType": "Graph",
+      "NodeType": "FunctionNode",
+      "Id": "81d9dae7336f4fe6a6daefa89f73ac2a",
+      "Inputs": [
+        {
+          "Id": "632b3a652dc549c68d2e8790fcd7b53a",
+          "Name": "docOrRevitLinkInstance",
+          "Description": " Use only if you want to query a linked model\n\nvar\nDefault value : null",
+          "UsingDefaultValue": true,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "a61cc89127494537a5bb098014cfeb12",
+          "Name": "View",
+          "Description": "return value",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "ae11cd5faaad4e9ab927d87c7d9f4b74",
+          "Name": "Legend",
+          "Description": "return value",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "3890d160b2c341188bde4dd5ba4c58c0",
+          "Name": "Schedule",
+          "Description": "return value",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "58bdf8dfa0ce46d2b519ea42c29d998c",
+          "Name": "Sheet",
+          "Description": "return value",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "33774256dca54b99bdc30b770696ba29",
+          "Name": "(Without Sheet) All Views",
+          "Description": "return value",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Collects all views in the active or given document."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "5c77fb38de0d43908998a73c6cef8c49",
+      "Inputs": [
+        {
+          "Id": "370f1141edb64dfca4ccd99500d69930",
+          "Name": "",
+          "Description": "Node to evaluate.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "1cc011b170f241f983b9121122cc9d3e",
+          "Name": "",
+          "Description": "Watch contents.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualize the output of node."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "9e0b4c9a03df49a48e8c86a9e706aa01",
+      "Inputs": [
+        {
+          "Id": "f143f1e5d0064488aadacbe5141ecadc",
+          "Name": "",
+          "Description": "Node to evaluate.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "653401cac03b454784a0841dc07ad4d7",
+          "Name": "",
+          "Description": "Watch contents.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualize the output of node."
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Elements.Element.GetCategory",
+      "Id": "82155e6f37264bdd93ae65144b2e8609",
+      "Inputs": [
+        {
+          "Id": "962bfc5f093842e0bd32ed1586b93461",
+          "Name": "element",
+          "Description": "Revit.Elements.Element",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "dc8c33c3758b45c5afa1d4aa19423052",
+          "Name": "Category",
+          "Description": "Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Get Element Category\n\nElement.GetCategory: Category"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Elements.Category.Name",
+      "Id": "fd3dfef306ca4451b51347c8742038cf",
+      "Inputs": [
+        {
+          "Id": "04bd5eddf96e4e3695f4c171ce87fbf2",
+          "Name": "category",
+          "Description": "Revit.Elements.Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "af069ead7c7143fea2af2c8e6c8a4aad",
+          "Name": "string",
+          "Description": "string",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "The name of the Category.\n\nCategory.Name: string"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "DSCore.List.Cycle@var[]..[],int",
+      "Id": "e08c2db06f394500b78dcd1dc0b11fe8",
+      "Inputs": [
+        {
+          "Id": "1d123224310a43488a078e32bf09c29c",
+          "Name": "list",
+          "Description": "List to repeat.\n\nvar[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "055c97052d3e4071987ecdc34c60af03",
+          "Name": "amount",
+          "Description": "Number of times to repeat.\n\nint",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "fd3f8d896e064d5ca1a1d5edc08c3104",
+          "Name": "list",
+          "Description": "List of repeated lists.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Creates a new list by concatenining copies of a given list.\n\nList.Cycle (list: var[]..[], amount: int): var[]..[]"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "DSCore.List.Count@var[]..[]",
+      "Id": "6b45abb17a864d2db8b6e41c8f077769",
+      "Inputs": [
+        {
+          "Id": "a253da524df14ca7921354a4f1980cd8",
+          "Name": "list",
+          "Description": "List to get the item count of.\n\nvar[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "62377ac52ae749579a5139b16379cfd6",
+          "Name": "count",
+          "Description": "List length.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Returns the number of items stored in the given list.\n\nList.Count (list: var[]..[]): int"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "==@var[]..[],var[]..[]",
+      "Id": "f6895f115fc34514ade36d7b6229b95f",
+      "Inputs": [
+        {
+          "Id": "4b572b69753e461d929ca29952174db4",
+          "Name": "x",
+          "Description": "x value.\n\nvar[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "83cd669fee274545a5a2748f63ee9076",
+          "Name": "y",
+          "Description": "y value.\n\nvar[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "9a1c40477f054cca83a67dc03d3a728a",
+          "Name": "var[]..[]",
+          "Description": "var[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Equal x to y?\n\n== (x: var[]..[], y: var[]..[]): var[]..[]"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "43f40450602f4483b02a411a848fe329",
+      "Inputs": [
+        {
+          "Id": "b69851c1b3fe4e699911e08202fab2da",
+          "Name": "",
+          "Description": "Node to evaluate.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "60bd855f62ac4146b38b397081f44d6b",
+          "Name": "",
+          "Description": "Watch contents.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualize the output of node."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "1e0bdf37440b4ae0b801a1e0d03b8b4b",
+      "Inputs": [
+        {
+          "Id": "65963e1133d84d9f81d8fb1007c652bd",
+          "Name": "",
+          "Description": "Node to evaluate.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "ca4672124fb04fa38c9fcfa87fa0567c",
+          "Name": "",
+          "Description": "Watch contents.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualize the output of node."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "78b4bdad7bd843d2a292fb741bcfc9a2",
+      "Inputs": [
+        {
+          "Id": "644e58dc5bf74e87b167a97f62ad5677",
+          "Name": "",
+          "Description": "Node to evaluate.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "5c5f0eb3033848d38a6644416dbcc09b",
+          "Name": "",
+          "Description": "Watch contents.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualize the output of node."
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CodeBlockNodeModel, DynamoCore",
+      "NodeType": "CodeBlockNode",
+      "Code": "Curtainwall;",
+      "Id": "130837ebd1f344b08d7c6143c8a69a12",
+      "Inputs": [
+        {
+          "Id": "edb766f7b7d840749caf63c598c988bd",
+          "Name": "Curtainwall",
+          "Description": "Curtainwall",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "6a4a0784963f4089a0b24ef44ade6ab3",
+          "Name": "",
+          "Description": "Value of expression at line 1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows for DesignScript code to be authored directly"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CodeBlockNodeModel, DynamoCore",
+      "NodeType": "CodeBlockNode",
+      "Code": "Locationline;",
+      "Id": "95188e7f820c47ba9a9d7a83373d0d8d",
+      "Inputs": [
+        {
+          "Id": "e30d4e14df5146c9b87af0914ea20472",
+          "Name": "Locationline",
+          "Description": "Locationline",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "41fc1114f34f40eeb69662fdf653fd13",
+          "Name": "",
+          "Description": "Value of expression at line 1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows for DesignScript code to be authored directly"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "38ae0a0809ec4fd4877d5f0c13e5b2c7",
+      "End": "c629cd732e6d4716b16cbc3299727d28",
+      "Id": "aaccfcfef79a436aa11e5e25c9959ced"
+    },
+    {
+      "Start": "10552befa2884813ac9c7ef5c09a0896",
+      "End": "b69851c1b3fe4e699911e08202fab2da",
+      "Id": "abaa5514d7f1485ca3947a995d408a6d"
+    },
+    {
+      "Start": "5fbc9486d25a4645b93aa8173a9722cb",
+      "End": "e2fb53b6cf2044e9aebc45b8c88ddf77",
+      "Id": "0c19178ec7764febb879f15b360bfe07"
+    },
+    {
+      "Start": "4b79567947524e6d9e0cac025e410a32",
+      "End": "7c839263b85d45c3b660af917897dd45",
+      "Id": "1618beb8ad6340a0b28a350a303147ec"
+    },
+    {
+      "Start": "a1b62264e8f847fd9a5b21bfadec4ecd",
+      "End": "6a9dacfb926044ec8e78cdf19c2b24a6",
+      "Id": "b654120761ac4aaa85545df8ac5b505a"
+    },
+    {
+      "Start": "c3e1cd3b971a4728b05c7dd15e6e4356",
+      "End": "01b9c67e7ac2457682a9fe0470a0f72f",
+      "Id": "5263ff24247f40eea9e3474259079ce8"
+    },
+    {
+      "Start": "5db5b2b25e514f82a5fa69937c011a7c",
+      "End": "e30d4e14df5146c9b87af0914ea20472",
+      "Id": "ed70f45b515847d29189e75a51f88917"
+    },
+    {
+      "Start": "c9f0283ad7924a8ea40c3195627c3654",
+      "End": "edb766f7b7d840749caf63c598c988bd",
+      "Id": "9d99dafff46d4a68844eff70169822fd"
+    },
+    {
+      "Start": "3a63c852d97343bfa4a5f9d4ff085728",
+      "End": "a070a849b2e045168baf9cf9cd4adfff",
+      "Id": "e38965fe0ad14942886c1a8093358d5f"
+    },
+    {
+      "Start": "e132e7d8c0ae420194843bad3b6f0b63",
+      "End": "d2937a62b5264d409b2f27483a5437f4",
+      "Id": "f3aa7d15199e4a83ac4cc23923f6b211"
+    },
+    {
+      "Start": "e132e7d8c0ae420194843bad3b6f0b63",
+      "End": "644e58dc5bf74e87b167a97f62ad5677",
+      "Id": "ef7a26deb5cd4c3aa4fc6c3a4b15e081"
+    },
+    {
+      "Start": "49b117fdbdf0420b96a3f21371e59bec",
+      "End": "962bfc5f093842e0bd32ed1586b93461",
+      "Id": "b0a2fea77bd94f3a9cfdb8850d65ac3b"
+    },
+    {
+      "Start": "49b117fdbdf0420b96a3f21371e59bec",
+      "End": "7b517397bc7049f98f2582e0e9da6e30",
+      "Id": "0af39e800a494b7983969b134a916d8f"
+    },
+    {
+      "Start": "26f1a18088a84498a923ce2edc8844f1",
+      "End": "04bd5eddf96e4e3695f4c171ce87fbf2",
+      "Id": "79373d358c1843a69206a182c3958976"
+    },
+    {
+      "Start": "4c4529e6b49147948a048cbcc51ebf78",
+      "End": "a253da524df14ca7921354a4f1980cd8",
+      "Id": "b08f928d83e3407eb0644c1d2b66e4bc"
+    },
+    {
+      "Start": "4c4529e6b49147948a048cbcc51ebf78",
+      "End": "4b572b69753e461d929ca29952174db4",
+      "Id": "6e8d0adbf25d4c9d8a51aafa35498eb2"
+    },
+    {
+      "Start": "729bc703cf6f487182e89b8132358a69",
+      "End": "65963e1133d84d9f81d8fb1007c652bd",
+      "Id": "0a93d33088404377b74bb2bbfccb6ee3"
+    },
+    {
+      "Start": "054f683beda24a34af53c34c53087ac5",
+      "End": "f143f1e5d0064488aadacbe5141ecadc",
+      "Id": "743e0621269f4684abd8796583e1f40e"
+    },
+    {
+      "Start": "f2cb9337d87a4706bafbcc4c28efd0d2",
+      "End": "79493b4668ea4da28e54f0aff3d8ca09",
+      "Id": "76f4ffd5dc2649a0b292a8fd7c8468e9"
+    },
+    {
+      "Start": "a61cc89127494537a5bb098014cfeb12",
+      "End": "370f1141edb64dfca4ccd99500d69930",
+      "Id": "e12b923f13414647a2cac26c60820f96"
+    },
+    {
+      "Start": "653401cac03b454784a0841dc07ad4d7",
+      "End": "e5c22c36700a4c12a97153bcd2dced37",
+      "Id": "8b7917e115ee4fa7a1c7172403b0c24c"
+    },
+    {
+      "Start": "dc8c33c3758b45c5afa1d4aa19423052",
+      "End": "4244675c61ae4de3801fd0786b6c6de7",
+      "Id": "428e0e3cebce453fb718e42b05baed07"
+    },
+    {
+      "Start": "af069ead7c7143fea2af2c8e6c8a4aad",
+      "End": "1d123224310a43488a078e32bf09c29c",
+      "Id": "90e9b92c81cd479ab95e8d0a8954057b"
+    },
+    {
+      "Start": "fd3f8d896e064d5ca1a1d5edc08c3104",
+      "End": "83cd669fee274545a5a2748f63ee9076",
+      "Id": "247a7fb45c7b40c5a6bb5ccea2638bef"
+    },
+    {
+      "Start": "62377ac52ae749579a5139b16379cfd6",
+      "End": "055c97052d3e4071987ecdc34c60af03",
+      "Id": "067598dd5dd7438da475ce1c0aae54c8"
+    },
+    {
+      "Start": "9a1c40477f054cca83a67dc03d3a728a",
+      "End": "afbfdcace1db4f6db886b7244285e0ce",
+      "Id": "7e8d907f32a34dec8a4b806dd474c4bb"
+    },
+    {
+      "Start": "ca4672124fb04fa38c9fcfa87fa0567c",
+      "End": "8034c0b7e5104fd395d2f48472b88882",
+      "Id": "3482338db8af45c08544293e5bb80f82"
+    },
+    {
+      "Start": "5c5f0eb3033848d38a6644416dbcc09b",
+      "End": "b15ec022673647f79c1fb8237e61e5cb",
+      "Id": "d726bf60f44345f88029be4554a33105"
+    },
+    {
+      "Start": "6a4a0784963f4089a0b24ef44ade6ab3",
+      "End": "610a6b63bec342f2bce7e43fc7427837",
+      "Id": "88a398f55055409ca6c100b57a41624e"
+    },
+    {
+      "Start": "41fc1114f34f40eeb69662fdf653fd13",
+      "End": "d69ee12198ca45b184df266f15ed1ff2",
+      "Id": "10a1eecdb986445aa953f1c819ce9fdc"
+    }
+  ],
+  "Dependencies": [
+    "c8e81411-6f5c-461e-8b9e-4bccecc03328"
+  ],
+  "NodeLibraryDependencies": [
+    {
+      "Name": "Genius Loci",
+      "Version": "2020.8.30",
+      "ReferenceType": "Package",
+      "Nodes": [
+        "81d9dae7336f4fe6a6daefa89f73ac2a"
+      ]
+    }
+  ],
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.3.0.5885",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "Background Preview",
+      "EyeX": -10030.885718815289,
+      "EyeY": 39022.335384508719,
+      "EyeZ": 21453.996445817189,
+      "LookX": 7601.7530027504,
+      "LookY": -37787.779417090693,
+      "LookZ": -22472.140650737765,
+      "UpX": 0.22855200316949389,
+      "UpY": 0.70090926429985723,
+      "UpZ": -0.6756405738747927
+    },
+    "NodeViews": [
+      {
+        "ShowGeometry": true,
+        "Name": "Exterior Side/Type for Dimensioning?",
+        "Id": "1abc28ecaf894b3a81419121975a6937",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 2114.1510722170638,
+        "Y": 10453.330410490864
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Making dimension for selected walls (customized by Binh)",
+        "Id": "9493e96717c148cc88a037d73c077d22",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 2603.1194871570588,
+        "Y": 10442.660153979086
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Dimension Line Offset",
+        "Id": "4e716ac98061435f860040638b6e7806",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 2137.8687361171369,
+        "Y": 10395.256727855727
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "All Elements In Active View",
+        "Id": "1a7c21db99d7491fb3f62cc0518ffebc",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": true,
+        "X": 2334.6486674604457,
+        "Y": 10808.514350340971
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Watch",
+        "Id": "ea974197c6f94270832aba302d232f62",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 2595.5241837500557,
+        "Y": 10804.363600478944
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Element.Geometry",
+        "Id": "249a8dcad8ba4b4484ae0d1c961bb75f",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 2822.8646902470769,
+        "Y": 10794.136801929877
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Document.ActiveView",
+        "Id": "1945437373d14fe7a65b8e0cb551a3e8",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 1712.1561642494476,
+        "Y": 10082.584787711294
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Select Model Element",
+        "Id": "03d0f208dbea4e4099daae9ecac7515e",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": true,
+        "X": 1479.2784609562036,
+        "Y": 9962.8392335140215
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Select Model Element",
+        "Id": "f63011e5b82e40338694db012a760875",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": true,
+        "X": 1481.5054483521205,
+        "Y": 9832.733236108128
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Making dimension for selected curtain walls (customized by Binh)",
+        "Id": "6f762225d6de42be8e8c0039f8536f9d",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 1959.92790606479,
+        "Y": 9846.273803040347
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Document.Current",
+        "Id": "47c480cc4ca94d7e8480358f9b6c59e7",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": true,
+        "X": 1481.6138390551043,
+        "Y": 10097.135718621194
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Original of Dimension wall",
+        "Id": "cc0e751c351c4d09ad0a0c269e855bf0",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": true,
+        "X": 3056.6535243096409,
+        "Y": 10446.921759249861
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Original of making dimension for curtain walls",
+        "Id": "61db359f0f8f4dc48b439d25e52baf3d",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": true,
+        "X": 2435.3111529875137,
+        "Y": 9841.3330473239148
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Select Model Elements",
+        "Id": "28c4482ba3984d71bffd9a71e242ed39",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": true,
+        "X": 2306.0901303514465,
+        "Y": 10605.716932695363
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Sheet.Views",
+        "Id": "ff0af217ac3348269e8f7780a69fb183",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -614.86284178093513,
+        "Y": 10587.310542828867
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "All Elements In View(s) - Data-Shapes",
+        "Id": "4ccd467afe764b6e90fd5204c23275f6",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -362.49096114463339,
+        "Y": 10666.757076905855
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Categories",
+        "Id": "a7c2508ff5054eb3a629ff63c9a41763",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 19.329419550201692,
+        "Y": 11018.329768119747
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Category.Name",
+        "Id": "ddf526f7476d47f2bac5a260dfb0b250",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 204.9844442592231,
+        "Y": 10727.820977074734
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "List.FilterByBoolMask",
+        "Id": "ad838cb8a2b54fa4acde069f147d0b50",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 998.93220547270073,
+        "Y": 10632.693315217017
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Document.ActiveView",
+        "Id": "e2746252ad1b40beb30872e20d7b77cc",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -917.51044912473742,
+        "Y": 10590.035155699439
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Document.Current",
+        "Id": "99741dcde65f4b1cb77402726b4a4e06",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -1074.1842206449628,
+        "Y": 10584.439662508606
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Collector of Views",
+        "Id": "81d9dae7336f4fe6a6daefa89f73ac2a",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -6.1129002649460062,
+        "Y": 10025.567906803306
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Watch",
+        "Id": "5c77fb38de0d43908998a73c6cef8c49",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 680.41695386572519,
+        "Y": 9812.1104272441389
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Watch",
+        "Id": "9e0b4c9a03df49a48e8c86a9e706aa01",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -784.467249323736,
+        "Y": 10917.914572001297
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Element.GetCategory",
+        "Id": "82155e6f37264bdd93ae65144b2e8609",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -41.952325629987854,
+        "Y": 10724.301227008526
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Category.Name",
+        "Id": "fd3dfef306ca4451b51347c8742038cf",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 239.31625927304987,
+        "Y": 11030.413995994799
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "List.Cycle",
+        "Id": "e08c2db06f394500b78dcd1dc0b11fe8",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 501.76227772331526,
+        "Y": 11011.831332610122
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "List.Count",
+        "Id": "6b45abb17a864d2db8b6e41c8f077769",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 308.79665836809789,
+        "Y": 11185.067502427408
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "==",
+        "Id": "f6895f115fc34514ade36d7b6229b95f",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 744.631893087766,
+        "Y": 10793.316751219616
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Watch",
+        "Id": "43f40450602f4483b02a411a848fe329",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 3449.6215303215326,
+        "Y": 10686.474219821093
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Watch",
+        "Id": "1e0bdf37440b4ae0b801a1e0d03b8b4b",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 1242.6721802815489,
+        "Y": 10702.456886244594
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Watch",
+        "Id": "78b4bdad7bd843d2a292fb741bcfc9a2",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 1243.2522807682833,
+        "Y": 10403.589224795096
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Code Block",
+        "Id": "130837ebd1f344b08d7c6143c8a69a12",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 1711.2103535515641,
+        "Y": 9834.9178348978839
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Code Block",
+        "Id": "95188e7f820c47ba9a9d7a83373d0d8d",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 1701.6869315628644,
+        "Y": 9934.9942555895086
+      }
+    ],
+    "Annotations": [
+      {
+        "Id": "c352839eba554a77afb3d6d87505ef74",
+        "Title": "Dimension with the curtain walls",
+        "Nodes": [
+          "1945437373d14fe7a65b8e0cb551a3e8",
+          "03d0f208dbea4e4099daae9ecac7515e",
+          "f63011e5b82e40338694db012a760875",
+          "6f762225d6de42be8e8c0039f8536f9d",
+          "47c480cc4ca94d7e8480358f9b6c59e7",
+          "61db359f0f8f4dc48b439d25e52baf3d",
+          "95188e7f820c47ba9a9d7a83373d0d8d",
+          "130837ebd1f344b08d7c6143c8a69a12"
+        ],
+        "Left": 1469.2784609562036,
+        "Top": 9779.733236108128,
+        "Width": 1276.03269203131,
+        "Height": 410.40248251306548,
+        "FontSize": 36.0,
+        "InitialTop": 9832.733236108128,
+        "InitialHeight": 409.40248251306548,
+        "TextblockHeight": 43.0,
+        "Background": "#FFC1D676"
+      },
+      {
+        "Id": "5b1b2881348d493e840c0d8c8fe09a7a",
+        "Title": "Click dimension wall",
+        "Nodes": [
+          "1abc28ecaf894b3a81419121975a6937",
+          "9493e96717c148cc88a037d73c077d22",
+          "4e716ac98061435f860040638b6e7806",
+          "28c4482ba3984d71bffd9a71e242ed39",
+          "cc0e751c351c4d09ad0a0c269e855bf0"
+        ],
+        "Left": 2104.1510722170638,
+        "Top": 10342.256727855727,
+        "Width": 1137.5024520925772,
+        "Height": 382.46020483963548,
+        "FontSize": 36.0,
+        "InitialTop": 10395.256727855727,
+        "InitialHeight": 355.46020483963548,
+        "TextblockHeight": 43.0,
+        "Background": "#FFC1D676"
+      }
+    ],
+    "X": -1470.8437036100543,
+    "Y": -12816.09126967064,
+    "Zoom": 1.2426159895663866
+  }
+}

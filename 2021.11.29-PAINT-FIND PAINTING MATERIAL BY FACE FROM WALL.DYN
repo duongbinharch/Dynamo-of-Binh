@@ -1,0 +1,212 @@
+{
+  "Uuid": "8d7b6d4b-98ac-47b4-820a-55f3555b0206",
+  "IsCustomNode": false,
+  "Description": null,
+  "Name": "Get Paint Material face from wall",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "import clr\r\n\r\n#Import the Revit Services\r\nclr.AddReference(\"RevitServices\")\r\nimport RevitServices\r\nfrom RevitServices.Persistence import DocumentManager\r\nfrom RevitServices.Transactions import TransactionManager\r\n\r\ndoc = DocumentManager.Instance.CurrentDBDocument\r\n\r\n#Import the Revit Nodes\r\nclr.AddReference(\"RevitNodes\")\r\nimport Revit\r\nclr.ImportExtensions(Revit.Elements)\r\nclr.ImportExtensions(Revit.GeometryConversion)\r\n\r\n#Import the Revit API\r\nclr.AddReference(\"RevitAPI\")\r\nimport Autodesk\r\nfrom Autodesk.Revit.DB import *\r\n\r\ndef tolist(obj1):\r\n\tif hasattr(obj1,\"__iter__\"):\r\n\t\treturn obj1\r\n\telse:\r\n\t\treturn [obj1]\r\n\r\ndef ReturnSingleOrList(list):\r\n\tif len(list)==1:\r\n\t\treturn list[0]\r\n\telse:\r\n\t\treturn list\r\n\r\n#This returns all the Geometries in an element\r\ndef GetElementGeometries(element):\r\n\telement = UnwrapElement(element)\r\n\tresult = []\r\n\tgeometries = element.Geometry[Options()]\r\n\tfor geometry in geometries:\r\n\t\tresult.append(geometry)\r\n\treturn ReturnSingleOrList(result)\r\n\r\n#Define Input (IN)\r\nwalls = UnwrapElement(tolist(IN[0]))\r\noutput = []\r\n\r\n# Start Transaction\r\nTransactionManager.Instance.EnsureInTransaction(doc)\r\n\r\noptions = Options()\r\nfor wall in walls:\r\n\twallMaterials = []\r\n\twallGeometry = GetElementGeometries(wall)\r\n\twallFaces = wallGeometry.Faces\r\n\tfor face in wallFaces:\r\n\t\tmaterialId = face.MaterialElementId\r\n\t\tmaterial = doc.GetElement(materialId)\r\n\t\twallMaterials.append(material)\r\n\toutput.append(wallMaterials)\r\n\t\r\n\r\n#End Transaction\r\nTransactionManager.Instance.TransactionTaskDone()\r\n\r\n#Define Output (OUT)\r\nOUT = output",
+      "VariableInputPorts": true,
+      "Id": "6da673d1027d43ff9782dc23cf75c07d",
+      "Inputs": [
+        {
+          "Id": "bc123686bbb64bdeb28166ea2778222e",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "74c4d2d6014a4dc9831f630e779ad119",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded IronPython script."
+    },
+    {
+      "ConcreteType": "Dynamo.Nodes.DSModelElementSelection, DSRevitNodesUI",
+      "NodeType": "ExtensionNode",
+      "InstanceId": [
+        "8136207d-a376-479d-a004-88c7ea506d51-0003b13d"
+      ],
+      "Id": "f753b78bbfe445e6a6ae424149a2faa5",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "53d1f551642143b1b540e206b2311740",
+          "Name": "Element",
+          "Description": "The selected elements.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "fdb7c7258b9c4c7f9059437afde2a883",
+      "Inputs": [
+        {
+          "Id": "08ef571a7d2b4a728237abaec9732ff8",
+          "Name": "",
+          "Description": "Node to evaluate.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "8b236ae1cf2647a1afcde6c810110c45",
+          "Name": "",
+          "Description": "Watch contents.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualize the output of node."
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "NodeType": "FunctionNode",
+      "FunctionSignature": "Revit.Elements.Element.Name",
+      "Id": "37a1da9ad24d4c4293a379a01f1d2108",
+      "Inputs": [
+        {
+          "Id": "ada5009237884199b17feb16865fc533",
+          "Name": "element",
+          "Description": "Revit.Elements.Element",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "b6f97c95233643238a5c80687aedd63a",
+          "Name": "string",
+          "Description": "string",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Auto",
+      "Description": "Get the Name of the Element\n\nElement.Name: string"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "74c4d2d6014a4dc9831f630e779ad119",
+      "End": "08ef571a7d2b4a728237abaec9732ff8",
+      "Id": "71dda978b02248cd8d422f8f91335d96"
+    },
+    {
+      "Start": "53d1f551642143b1b540e206b2311740",
+      "End": "bc123686bbb64bdeb28166ea2778222e",
+      "Id": "1bb9b0977c1a406c9cc5de82d4851c52"
+    },
+    {
+      "Start": "8b236ae1cf2647a1afcde6c810110c45",
+      "End": "ada5009237884199b17feb16865fc533",
+      "Id": "ddfd717654394fdb8e87cbb64af1d5d8"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.3.1.11775",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "NodeViews": [
+      {
+        "ShowGeometry": true,
+        "Name": "Python Script",
+        "Id": "6da673d1027d43ff9782dc23cf75c07d",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 185.0,
+        "Y": 250.0
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Select Model Element",
+        "Id": "f753b78bbfe445e6a6ae424149a2faa5",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": -69.5,
+        "Y": 100.5
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Watch",
+        "Id": "fdb7c7258b9c4c7f9059437afde2a883",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 360.0,
+        "Y": 250.0
+      },
+      {
+        "ShowGeometry": true,
+        "Name": "Element.Name",
+        "Id": "37a1da9ad24d4c4293a379a01f1d2108",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "X": 795.5,
+        "Y": 321.5
+      }
+    ],
+    "Annotations": [],
+    "X": -315.5525,
+    "Y": -164.91750000000002,
+    "Zoom": 0.8425
+  }
+}

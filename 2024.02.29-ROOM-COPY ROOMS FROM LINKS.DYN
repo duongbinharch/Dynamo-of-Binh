@@ -1,0 +1,146 @@
+{
+  "Uuid": "694226e6-484d-413a-a6a6-bae48dfbd14e",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "00BinhDUONG - Room - Copy Rooms from links",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": true,
+      "Id": "4565ea650b634e9ba17c7168ccfd73bb",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "6bc5a6df2e164f22a8c1caf9e37ba081",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Selection between a true and false."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "import clr\r\nclr.AddReference('RevitAPI')\r\nfrom Autodesk.Revit.DB import *\r\nfrom Autodesk.Revit.UI import Selection\r\nimport Autodesk.Revit.Creation\r\nfrom Autodesk.Revit.UI import Selection\r\nimport RevitServices\r\nfrom RevitServices.Persistence import DocumentManager\r\nfrom RevitServices.Transactions import TransactionManager\r\n\r\n# Get the current Revit document\r\ndoc = DocumentManager.Instance.CurrentDBDocument\r\nuidoc = DocumentManager.Instance.CurrentUIApplication.ActiveUIDocument\r\n\r\ndef selectLink():\r\n    link = uidoc.Selection.PickObject(Selection.ObjectType.Element, \"Select Revit link\")\r\n    return doc.GetElement(link.ElementId)\r\n\r\ndef getRooms(link, doc):\r\n    print(doc.ActiveView.Id)\r\n    linkViews = FilteredElementCollector(link).OfCategory(BuiltInCategory.OST_Views).OfClass(ViewPlan).ToElements()\r\n    lView = None\r\n    for i in linkViews:\r\n        if i.GenLevel:\r\n            if round(i.GenLevel.Elevation, 2) == round(doc.ActiveView.GenLevel.Elevation, 2):\r\n                lView = i\r\n                break\r\n    rooms = FilteredElementCollector(link, lView.Id).OfCategory(BuiltInCategory.OST_Rooms).ToElements()\r\n    return rooms\r\n\r\ndef RoomsBoundaries(room):\r\n    level = room.Level\r\n    number = room.Number\r\n    name = room.LookupParameter(\"Name\").AsString()\r\n    opt = SpatialElementBoundaryOptions()\r\n    boundaries = room.GetBoundarySegments(opt)\r\n    curves = []\r\n    for segment in boundaries:\r\n        for b in segment:\r\n            curve = b.GetCurve()\r\n            curves.append(curve)\r\n    position = room.Location\r\n    return name, number, level, curves, position.Point\r\n\r\ndef recreateRoom(LinkRoom):\r\n    app = doc.Application\r\n    docCreation = Autodesk.Revit.Creation.Document\r\n    curveArr = CurveArray()\r\n    for c in LinkRoom[3]:\r\n        curveArr.Append(c)\r\n    doc.Create.NewRoomBoundaryLines(doc.ActiveView.SketchPlane, curveArr, doc.ActiveView)\r\n    tagPoint = UV(LinkRoom[4].X, LinkRoom[4].Y)\r\n    room = doc.Create.NewRoom(doc.ActiveView.GenLevel, tagPoint)\r\n    room.Number = LinkRoom[1]\r\n    room.Name = LinkRoom[0]\r\n    return room\r\n\r\noutlist = []\r\nif IN[0]:\r\n    link = selectLink()\r\n    t = Transaction(doc, \"Create Rooms\")\r\n    t.Start()\r\n    for r in getRooms(link.GetLinkDocument(), doc):\r\n        print(r)\r\n        room = RoomsBoundaries(r)\r\n        try:\r\n            outlist.append(recreateRoom(room))\r\n        except:\r\n            pass\r\n    t.Commit()\r\n    \r\nOUT= outlist",
+      "Engine": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "7ea86b9494eb42b1ad053213fd828704",
+      "Inputs": [
+        {
+          "Id": "1e835306bffd4e0ca10c3aa0ed01adf2",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "63133a65215b481b8cb5d982131f8288",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "6bc5a6df2e164f22a8c1caf9e37ba081",
+      "End": "1e835306bffd4e0ca10c3aa0ed01adf2",
+      "Id": "e5c92d7cf07b4410a60c4cf6dd8839ea"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "2.12",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "1.10",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.12.1.8246",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "NodeViews": [
+      {
+        "Id": "4565ea650b634e9ba17c7168ccfd73bb",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Name": "Active ",
+        "ShowGeometry": true,
+        "Excluded": false,
+        "X": 230.7528220899512,
+        "Y": 678.06419215922767
+      },
+      {
+        "Id": "7ea86b9494eb42b1ad053213fd828704",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Name": "Copy Rooms from Link selected",
+        "ShowGeometry": true,
+        "Excluded": false,
+        "X": 404.75328405209871,
+        "Y": 677.31709205298671
+      }
+    ],
+    "Annotations": [],
+    "X": 61.119271892731263,
+    "Y": -314.95597193511639,
+    "Zoom": 0.9584717466151792
+  }
+}
